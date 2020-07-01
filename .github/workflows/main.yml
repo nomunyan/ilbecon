@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  issues:
+    types: [opened, edited, closed, deleted, labeled, reopened]
+
+jobs:
+  build:
+    if: ${{ contains(github.event.issue.labels.*.name, 'ilbecon') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - run: yarn
+      - name: Build ilbecon.json
+        run: yarn start
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+      - name: Commit ilbecon.json
+        run: |
+          git config user.email "nomunyan@yahoo.co.jp"
+          git config user.name "Nomu Nyan"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          git checkout master
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update ilbecon.json"; git push origin master)
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
