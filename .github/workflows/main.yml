@@ -24,7 +24,7 @@ jobs:
       - name: Commit ilbecon.json
         run: |
           git config user.email "nomunyan@yahoo.co.jp"
-          git config user.name "Nomu Nyan"
+          git config user.name "ilbecon Bot"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           git checkout master
           git add .
