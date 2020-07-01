@@ -27,7 +27,7 @@ const ilbeconList = <Ilbecon[]>data;
 const issue: Issue = {
   num: Number.parseInt(process.env.ISSUE_NUMBER || "-1"),
   body: process.env.ISSUE_BODY || "",
-  state: process.env.ISSUE_STATE || "close",
+  state: process.env.ISSUE_STATE || "closed",
 };
 const reImage = /-\s*(?<image>https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(?<srl>.*)\..*)/g;
 const reMetadata = /\|\s*(?<title>[^|]*)\s*\|\s*(?<author>[^|]*)\s*\|\s*(?<tags>[^|]*)\s*\|\s*(?<source>[^|]*)\s*\|/gi;
@@ -36,7 +36,7 @@ const metaMatches = [...issue.body.matchAll(reMetadata)][2];
 const foundIlbecon = ilbeconList.find((el) => el.id === issue.num);
 
 (async () => {
-  if (issue.state === "close") {
+  if (issue.state === "closed") {
     if (foundIlbecon) {
       ilbeconList.splice(ilbeconList.indexOf(foundIlbecon), 1);
     }
