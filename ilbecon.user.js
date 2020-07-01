@@ -107,7 +107,7 @@ Vue.component("ilbecon-list", {
     const ilbeconPopup = Popup.show(
       "일베콘 선택",
       `
-<div id="ilbeconApp" style="width: 500px; height: auto; margin-top: -30px; padding: 10px;">
+<div id="ilbeconApp" style="width: 800px; max-height: 800px; overflow: scroll; margin-top: -30px; padding: 10px;">
 <my-tab @change="changeTab" :selected="selTab"/>
 <div style="border: 1px solid #e2e2e2; padding: 10px; margin-top: -1px; background: #e9e9e9;">
   <template  v-if="selTab === '검색'">
