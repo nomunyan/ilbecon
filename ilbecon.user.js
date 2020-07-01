@@ -10,19 +10,11 @@
 // @require      https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js
 // ==/UserScript==
 
-async function searchGithubIssues(repo, label, query) {
-  const { data } = await axios.get("https://api.github.com/search/issues", {
-    params: {
-      q: `is:open repo:${repo} label:${label} ${query}`,
-    },
-  });
-  return data;
-}
-async function getGithubIssue(repo, id) {
-  const { data } = await axios.get(
-    `https://api.github.com/repos/${repo}/issues/${id}`
+async function fetchIlbecon() {
+  const { data: res } = await axios.get(
+    `https://nomunyan.github.io/ilbecon/ilbecon.json`
   );
-  return data;
+  return res.data;
 }
 
 Vue.component("my-tab", {
@@ -61,7 +53,7 @@ Vue.component("my-tab", {
     },
   }),
   methods: {
-    select: function (val) {
+    select(val) {
       this.selected = val;
       this.$emit("change", val);
     },
@@ -72,22 +64,22 @@ Vue.component("ilbecon-item", {
   template: `
 <span class="comment-image-box">
 <span>
-  <img class="img-landscape" :src="data.image"
-       style="visibility: visible; cursor: pointer;" onload="showImage(this)" @click="$emit('click', data)">
+  <img class="img-landscape" :src="image"
+       style="visibility: visible; cursor: pointer;" onload="showImage(this)" @click="$emit('click')">
 </span>
 </span>
 `,
-  props: ["data"],
+  props: ["image"],
 });
 
 Vue.component("ilbecon-list", {
   template: `
-<div class="aside-section" v-for="ilbecon in data" style="cursor: pointer;" :style="open ? [] : closeStyle">
+<div class="aside-section" style="cursor: pointer; margin-bottom: 10px;" :style="open ? [] : closeStyle">
   <h3 @click="open = !open" style="text-align: left; padding-left: 10px;">
-    {{ ilbecon.title }}
-    <span @click.stop="$emit('toggle-favorite', ilbecon.id)" class="ico-bookmark" :class="{ 'mark-on': favoriteIds.includes(ilbecon.id) }"></span>
+    {{ data.title }}
+    <span @click.stop="$emit('toggle-favorite', data.id)" class="ico-bookmark" :class="{ 'mark-on': favoriteIds.includes(data.id) }" style="margin-left: 6px;"></span>
   </h3>
-  <ilbecon-item v-for="item in ilbecon.item" :data="item" @click="$emit('selected', $event)" />
+  <ilbecon-item v-for="image in data.images" :image="image" @click="$emit('selected', image)" />
 </div>
 `,
   props: ["data", "favoriteIds"],
@@ -107,17 +99,19 @@ Vue.component("ilbecon-list", {
     const ilbeconPopup = Popup.show(
       "일베콘 선택",
       `
-<div id="ilbeconApp" style="width: 800px; max-height: 800px; overflow: scroll; margin-top: -30px; padding: 10px;">
+<div id="ilbeconApp" style="width: 750px; height: 550px; overflow: auto; margin-top: -30px; padding: 10px;">
 <my-tab @change="changeTab" :selected="selTab"/>
 <div style="border: 1px solid #e2e2e2; padding: 10px; margin-top: -1px; background: #e9e9e9;">
   <template  v-if="selTab === '검색'">
     <div class="post-search-wrap" style="margin-top: 0; margin-bottom: 20px;">
-      <input type="text" name="ilbecon_search" v-model="query" @keyup.enter="search">
-      <button class="btn-default btn-search" @click="search"><span>검색</span></button>
+      <input ref="searchInput" @keyup.enter="query=$refs.searchInput.value" type="text" name="ilbecon_search">
+      <button class="btn-default btn-search" @click="query=$refs.searchInput.value"><span>검색</span></button>
     </div>
-    <ilbecon-list :data="searchList" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
+    <ilbecon-list v-for="ilbecon in searchList" :data="ilbecon" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
   </template>
-  <ilbecon-list v-else-if="selTab === '즐겨찾기'" :data="favoriteList" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
+  <template v-else-if="selTab === '즐겨찾기'">
+    <ilbecon-list v-for="ilbecon in favoriteList" :data="ilbecon" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
+  </template>
 </div>
 </div>
 `
@@ -127,63 +121,36 @@ Vue.component("ilbecon-list", {
       data: {
         query: "",
         favoriteIds: [],
-        favoriteList: [],
-        searchList: [],
+        ilbeconList: [],
         selTab: "즐겨찾기",
-        reIlbecon: /- (?<image>https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(?<srl>.*)\..*)/g,
+        reIlbecon: /https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(.*)\..*/g,
       },
-      created: async function () {
+      async created() {
         this.favoriteIds = JSON.parse(
           localStorage.getItem("favoriteIds") || "[]"
         );
-        await this.fetchFavorites();
+        this.ilbeconList = await fetchIlbecon();
+      },
+      computed: {
+        favoriteList() {
+          return this.ilbeconList.filter((val) =>
+            this.favoriteIds.includes(val.id)
+          );
+        },
+        searchList() {
+          return this.ilbeconList.filter(
+            (val) => val.tags.includes(this.query) || val.title === this.query
+          );
+        },
       },
       methods: {
-        changeTab: function (val) {
+        changeTab(val) {
           this.selTab = val;
         },
-        fetchFavorites: async function () {
-          this.favoriteList = [];
-          const result = [];
-          for (const id of this.favoriteIds) {
-            const issue = await getGithubIssue("nomunyan/ilbecon", id);
-            const matches = [...issue.body.matchAll(this.reIlbecon)];
-            result.push({
-              id: issue.number,
-              title: issue.title,
-              item: matches.map((match) => ({
-                image: match.groups.image,
-                srl: match.groups.srl,
-              })),
-            });
-          }
-          this.favoriteList = result;
-        },
-        search: async function () {
-          this.searchList = [];
-          let data = await searchGithubIssues(
-            "nomunyan/ilbecon",
-            "ilbecon",
-            this.query
-          );
-          if (data.total_count === 0) return;
-          data = data.items.map((issue) => {
-            const matches = [...issue.body.matchAll(this.reIlbecon)];
-            return {
-              id: issue.number,
-              title: issue.title,
-              item: matches.map((match) => ({
-                image: match.groups.image,
-                srl: match.groups.srl,
-              })),
-            };
-          });
-          this.searchList = data;
-        },
-        close: function () {
+        close() {
           ilbeconPopup.close();
         },
-        toggleFavorite: async function (id) {
+        async toggleFavorite(id) {
           if (this.favoriteIds.includes(id)) {
             this.favoriteIds = this.favoriteIds.filter((item) => item !== id);
           } else {
@@ -192,7 +159,7 @@ Vue.component("ilbecon-list", {
           localStorage.setItem("favoriteIds", JSON.stringify(this.favoriteIds));
           await this.fetchFavorites();
         },
-        selected: function (ilbecon) {
+        selected(image) {
           const tr = document.getElementById(`comment-image-tr-${dataForm}`);
           const td = tr.getElementsByTagName("td")[0];
           td.classList.add("img-set");
@@ -204,12 +171,14 @@ Vue.component("ilbecon-list", {
           img.style.visibility = "hidden";
           img.removeAttribute("width");
           img.removeAttribute("height");
-          img.setAttribute("src", ilbecon.image);
+          img.setAttribute("src", image);
           img.setAttribute("onload", "showImage(this)");
           const inputSrl = document.querySelector(
             `#${dataForm} input[name=comment_file_srl]`
           );
-          inputSrl.value = ilbecon.srl;
+          inputSrl.value = image.match(
+            /https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(.*)\..*/i
+          )[1];
           this.close();
         },
       },
