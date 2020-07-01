@@ -1,5 +1,6 @@
 import { data } from "../docs/ilbecon.json";
 import fs from "fs";
+import { exit } from "process";
 
 interface Ilbecon {
   id: number;
@@ -68,4 +69,7 @@ const foundIlbecon = ilbeconList.find((el) => el.id === issue.num);
   await writeJSON(ilbeconList);
 })()
   .then(() => console.log("done."))
-  .catch((err) => console.log(err.message));
+  .catch((err) => {
+    console.log(err.message);
+    exit(1);
+  });
