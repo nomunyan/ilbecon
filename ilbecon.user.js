@@ -177,7 +177,7 @@ Vue.component("ilbecon-list", {
             `#${dataForm} input[name=comment_file_srl]`
           );
           inputSrl.value = image.match(
-            /https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(.*)\..*/i
+            /https:\/\/(?:ncache|www)\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/.*\/\d*\/.*_(.*)\..*/i
           )[1];
           this.close();
         },
