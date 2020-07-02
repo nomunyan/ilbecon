@@ -29,7 +29,7 @@ const issue: Issue = {
   body: process.env.ISSUE_BODY || "",
   state: process.env.ISSUE_STATE || "closed",
 };
-const reImage = /-\s*(?<image>https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(?<srl>.*)\..*)/g;
+const reImage = /-\s*(?<image>https:\/\/(?:ncache|www)\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/.*\/\d*\/.*_(?<srl>.*)\..*)/g;
 const reMetadata = /\|\s*(?<title>[^|]*)\s*\|\s*(?<author>[^|]*)\s*\|\s*(?<tags>[^|]*)\s*\|\s*(?<source>[^|]*)\s*\|/gi;
 const imgMatches = [...issue.body.matchAll(reImage)];
 const metaMatches = [...issue.body.matchAll(reMetadata)][2];
