@@ -44,7 +44,8 @@ const foundIlbecon = ilbeconList.find((el) => el.id === issue.num);
     return;
   }
 
-  if (!metaMatches || !imgMatches) throw new Error("ilbecon syntax error!");
+  if (!metaMatches || imgMatches.length === 0)
+    throw new Error("ilbecon syntax error!");
 
   if (foundIlbecon) {
     foundIlbecon.title = metaMatches.groups?.title.trim() || "";
