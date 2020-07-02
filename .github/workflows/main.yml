@@ -28,7 +28,7 @@ jobs:
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           git checkout master
           git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update ilbecon.json ${ISSUE_TITLE} #${ISSUE_NUMBER}"; git push origin master)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update ilbecon.json ${ISSUE_TITLE} #${ISSUE_NUMBER}"; git pull --rebase; git push origin master)
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
