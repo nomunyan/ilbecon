@@ -7,15 +7,69 @@
 // @match        *://*.ilbe.com/view/*
 // @grant        none
 // @require      https://cdn.jsdelivr.net/npm/vue@2.6.0/dist/vue.min.js
-// @require      https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js
 // ==/UserScript==
 
 async function fetchIlbecon() {
-  const { data: res } = await axios.get(
-    `https://nomunyan.github.io/ilbecon/ilbecon.json`
-  );
-  return res;
+  const res = await fetch("https://nomunyan.github.io/ilbecon/ilbecon.json", {
+    method: "GET",
+    mode: "cors",
+  });
+  return await res.json();
 }
+
+window.updateCommentBoxes = function () {
+  const commentWrap = document.getElementsByClassName("post-comment-wrap")[0];
+  const commentForms = commentWrap.getElementsByClassName(
+    "comment-item comment-write"
+  );
+  for (const commentForm of commentForms) {
+    const btnArea = commentForm.getElementsByClassName("btn-comment")[0];
+    const dataForm = commentForm.getElementsByTagName("form")[0].id;
+    if (btnArea.getElementsByClassName("btn-ilbecon").length === 0)
+      btnArea.insertAdjacentHTML(
+        "beforeend",
+        `<button id="ilbecon" data-form="${dataForm}" class="btn-default btn-cmt-image btn-ilbecon" type="button" style="float:left;margin-left:6px;" onclick="chooserCommentIlbecon(this)"><span>일베콘</span></button>`
+      );
+  }
+
+  const favoriteImages = JSON.parse(
+    localStorage.getItem("favoriteImages") || "[]"
+  );
+  const commentImageBoxes = commentWrap.getElementsByClassName(
+    "comment-image-box"
+  );
+  for (const commentImageBox of commentImageBoxes) {
+    const bookmark = commentImageBox.getElementsByClassName("ico-bookmark");
+    if (bookmark.length !== 0) {
+      const image = commentImageBox
+        .getElementsByClassName("comment-image")[0]
+        .getAttribute("src");
+      if (favoriteImages.includes(image)) bookmark[0].classList.add("mark-on");
+      else bookmark[0].classList.remove("mark-on");
+    } else {
+      const imageView = commentImageBox.children[0];
+      const image = commentImageBox.children[0].children[0].getAttribute("src");
+
+      imageView.insertAdjacentHTML(
+        "afterbegin",
+        `<span onclick="toggleLocalStorageFavoriteImage('${image}');" class="ico-bookmark ${
+          favoriteImages.includes(image) ? "mark-on" : ""
+        }" style="position: absolute; z-index: 1;"></span>`
+      );
+    }
+  }
+};
+
+window.toggleLocalStorageFavoriteImage = function (image) {
+  const favoriteImages = JSON.parse(
+    localStorage.getItem("favoriteImages") || "[]"
+  );
+  const foundIndex = favoriteImages.findIndex((item) => item === image);
+  if (foundIndex !== -1) favoriteImages.splice(foundIndex, 1);
+  else favoriteImages.splice(0, 0, image);
+  localStorage.setItem("favoriteImages", JSON.stringify(favoriteImages));
+  window.updateCommentBoxes();
+};
 
 Vue.component("my-tab", {
   template: `
@@ -63,26 +117,36 @@ Vue.component("my-tab", {
 Vue.component("ilbecon-item", {
   template: `
 <span class="comment-image-box">
-<span>
-  <img class="img-landscape" :src="image"
-       style="visibility: visible; cursor: pointer;" onload="showImage(this)" @click="$emit('click')">
-</span>
+  <span>
+    <span @click.stop="$emit('toggle-favorite-image')" class="ico-bookmark" :class="{ 'mark-on': favorite }" style="position: absolute; z-index: 1;"></span>
+    <img class="img-landscape" :src="image"
+        style="visibility: visible; cursor: pointer; z-index: 0;" onload="showImage(this)" @click="$emit('click')">
+  </span>
 </span>
 `,
-  props: ["image"],
+  props: ["image", "favorite"],
 });
 
 Vue.component("ilbecon-list", {
   template: `
-<div class="aside-section" style="cursor: pointer; margin-bottom: 10px;" :style="open ? [] : closeStyle">
-  <h3 @click="open = !open" style="text-align: left; padding-left: 10px;">
-    {{ data.title }}
-    <span @click.stop="$emit('toggle-favorite', data.id)" class="ico-bookmark" :class="{ 'mark-on': favoriteIds.includes(data.id) }" style="margin-left: 6px;"></span>
+<div class="aside-section" style="margin-bottom: 10px; text-align: left;" :style="open ? [] : closeStyle">
+  <h3 @click="open = !open" style="cursor: pointer; text-align: left; padding-left: 10px;">
+    {{ data.title }}<span style="font-size: 85%;">{{ data.author && ' - ' + data.author }}</span>
+    <span v-if="!disableFavorite" @click.stop="$emit('toggle-favorite', data.id)" class="ico-bookmark" :class="{ 'mark-on': favorite }" style="margin-left: 6px;"></span>
   </h3>
-  <ilbecon-item v-for="image in data.images" :image="image" @click="$emit('selected', image)" />
+  <ilbecon-item v-for="image in data.images" 
+    :image="image"
+    :favorite="favoriteImages.includes(image)"
+    @click="$emit('selected', image)"
+    @toggle-favorite-image="$emit('toggle-favorite-image', image)" />
 </div>
 `,
-  props: ["data", "favoriteIds"],
+  props: {
+    data: { type: Object },
+    favorite: { type: Boolean },
+    favoriteImages: { type: Array },
+    disableFavorite: { type: Boolean, default: false },
+  },
   data: () => ({
     open: false,
     closeStyle: {
@@ -99,7 +163,7 @@ Vue.component("ilbecon-list", {
     const ilbeconPopup = Popup.show(
       "일베콘 선택",
       `
-<div id="ilbeconApp" style="width: 750px; height: 550px; overflow: auto; margin-top: -30px; padding: 10px;">
+<div id="ilbeconApp" style="width: 760px; height: 550px; overflow: auto; margin-top: -30px; padding: 10px;">
 <my-tab @change="changeTab" :selected="selTab"/>
 <div style="border: 1px solid #e2e2e2; padding: 10px; margin-top: -1px; background: #e9e9e9;">
   <template  v-if="selTab === '검색'">
@@ -107,13 +171,33 @@ Vue.component("ilbecon-list", {
       <input ref="searchInput" @keyup.enter="query=$refs.searchInput.value" type="text" name="ilbecon_search">
       <button class="btn-default btn-search" @click="query=$refs.searchInput.value"><span>검색</span></button>
     </div>
-    <ilbecon-list v-for="ilbecon in searchList" :data="ilbecon" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
+    <ilbecon-list v-for="ilbecon in searchList"
+      :data="ilbecon"
+      :favorite="favoriteIds.includes(ilbecon.id)"
+      :favorite-images="favoriteImages"
+      @toggle-favorite="toggleFavorite"
+      @toggle-favorite-image="toggleFavoriteImage"
+      @selected="selected" />
   </template>
   <template v-else-if="selTab === '즐겨찾기'">
-    <ilbecon-list v-for="ilbecon in favoriteList" :data="ilbecon" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
+    <ilbecon-list
+      :data="{ title: '즐겨찾는 이미지', images: favoriteImages }"
+      :favorite-images="favoriteImages"
+      disable-favorite
+      @toggle-favorite-image="toggleFavoriteImage"
+      @selected="selected" />
+
+    <ilbecon-list v-for="ilbecon in favoriteList"
+      :data="ilbecon"
+      :favorite-images="favoriteImages"
+      :favorite="favoriteIds.includes(ilbecon.id)"
+      @toggle-favorite="toggleFavorite"
+      @toggle-favorite-image="toggleFavoriteImage"
+      @selected="selected" />
   </template>
   <template v-else-if="selTab === '정보'">
-    <h2 style="color: #666; font-size: 14pt; margin-bottom: 10px;">일베콘</h2>
+    <h2 style="color: #666; font-size: 14pt; margin-bottom: 10px;">일베콘</h2>>
+    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">즐겨찾기는 브라우저에 저장돼서 캐시삭제 하면 사라지니 주의.<h3>
     <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">현재 버전: {{ this.nowVersion }}<h3>
     <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">최신 버전: {{ this.newVersion }}<h3>
     <a style="color: #666; font-size: 10pt; margin-bottom: 10px;" href="https://github.com/nomunyan/ilbecon" target="_blank">소스코드<a>
@@ -129,6 +213,7 @@ Vue.component("ilbecon-list", {
         newVersion: "",
         query: "",
         favoriteIds: [],
+        favoriteImages: [],
         ilbeconList: [],
         selTab: "즐겨찾기",
         reIlbecon: /https:\/\/(?:ncache|www)\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/.*\/\d*\/.*_(.*)\..*/i,
@@ -136,6 +221,9 @@ Vue.component("ilbecon-list", {
       async created() {
         this.favoriteIds = JSON.parse(
           localStorage.getItem("favoriteIds") || "[]"
+        );
+        this.favoriteImages = JSON.parse(
+          localStorage.getItem("favoriteImages") || "[]"
         );
         const { data, version } = await fetchIlbecon();
         this.ilbeconList = data;
@@ -169,6 +257,12 @@ Vue.component("ilbecon-list", {
           localStorage.setItem("favoriteIds", JSON.stringify(this.favoriteIds));
           await this.fetchFavorites();
         },
+        toggleFavoriteImage(image) {
+          toggleLocalStorageFavoriteImage(image);
+          this.favoriteImages = JSON.parse(
+            localStorage.getItem("favoriteImages") || "[]"
+          );
+        },
         selected(image) {
           const tr = document.getElementById(`comment-image-tr-${dataForm}`);
           const td = tr.getElementsByTagName("td")[0];
@@ -193,23 +287,12 @@ Vue.component("ilbecon-list", {
     });
   };
 
-  function btnRegistration() {
+  function ilbeconRegistration() {
     const targetNode = document.getElementById("comment_wrap_in");
     const config = { attributes: true, childList: true, subtree: false };
-    const callback = function (mutationsList, observer) {
-      const commentForms = document.getElementsByClassName(
-        "comment-item comment-write"
-      );
-      for (const commentForm of commentForms) {
-        const btnArea = commentForm.getElementsByClassName("btn-comment")[0];
-        const dataForm = commentForm.getElementsByTagName("form")[0].id;
-        if (btnArea.getElementsByClassName("btn-ilbecon").length !== 0) return;
-        btnArea.innerHTML += `<button id="ilbecon" data-form="${dataForm}" class="btn-default btn-cmt-image btn-ilbecon" type="button" style="float:left;margin-left:6px;" onclick="chooserCommentIlbecon(this)"><span>일베콘</span></button>`;
-      }
-    };
-    const observer = new MutationObserver(callback);
+    const observer = new MutationObserver(window.updateCommentBoxes);
     observer.observe(targetNode, config);
   }
 
-  btnRegistration();
+  ilbeconRegistration();
 })(Vue, window.Popup, window.localStorage);
