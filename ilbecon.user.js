@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ilbecon
 // @namespace    https://github.com/nomunyan/ilbecon
-// @version      0.1
+// @version      1.0.0
 // @description  일베콘
 // @author       애게이
 // @match        *://*.ilbe.com/view/*
@@ -14,7 +14,7 @@ async function fetchIlbecon() {
   const { data: res } = await axios.get(
     `https://nomunyan.github.io/ilbecon/ilbecon.json`
   );
-  return res.data;
+  return res;
 }
 
 Vue.component("my-tab", {
@@ -31,7 +31,7 @@ Vue.component("my-tab", {
 `,
   props: ["selected"],
   data: () => ({
-    pages: ["즐겨찾기", "검색"],
+    pages: ["즐겨찾기", "검색", "정보"],
     tabStyle: {
       position: "relative",
       zIndex: "1",
@@ -112,6 +112,12 @@ Vue.component("ilbecon-list", {
   <template v-else-if="selTab === '즐겨찾기'">
     <ilbecon-list v-for="ilbecon in favoriteList" :data="ilbecon" :favorite-ids="favoriteIds" @toggle-favorite="toggleFavorite" @selected="selected" />
   </template>
+  <template v-else-if="selTab === '정보'">
+    <h2 style="color: #666; font-size: 14pt; margin-bottom: 10px;">일베콘</h2>
+    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">현재 버전: {{ this.nowVersion }}<h3>
+    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">최신 버전: {{ this.newVersion }}<h3>
+    <a style="color: #666; font-size: 10pt; margin-bottom: 10px;" href="https://github.com/nomunyan/ilbecon" target="_blank">소스코드<a>
+  </template>
 </div>
 </div>
 `
@@ -119,17 +125,21 @@ Vue.component("ilbecon-list", {
     const app = new Vue({
       el: "#ilbeconApp",
       data: {
+        nowVersion: GM_info.script.version,
+        newVersion: "",
         query: "",
         favoriteIds: [],
         ilbeconList: [],
         selTab: "즐겨찾기",
-        reIlbecon: /https:\/\/ncache\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/\d*\/\d*\/.*_(.*)\..*/g,
+        reIlbecon: /https:\/\/(?:ncache|www)\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/.*\/\d*\/.*_(.*)\..*/i,
       },
       async created() {
         this.favoriteIds = JSON.parse(
           localStorage.getItem("favoriteIds") || "[]"
         );
-        this.ilbeconList = await fetchIlbecon();
+        const { data, version } = await fetchIlbecon();
+        this.ilbeconList = data;
+        this.newVersion = version || "정보를 불러오지 못함";
       },
       computed: {
         favoriteList() {
@@ -176,9 +186,7 @@ Vue.component("ilbecon-list", {
           const inputSrl = document.querySelector(
             `#${dataForm} input[name=comment_file_srl]`
           );
-          inputSrl.value = image.match(
-            /https:\/\/(?:ncache|www)\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/.*\/\d*\/.*_(.*)\..*/i
-          )[1];
+          inputSrl.value = image.match(this.reIlbecon)[1];
           this.close();
         },
       },

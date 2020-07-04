@@ -1,4 +1,4 @@
-import { data } from "../docs/ilbecon.json";
+import ilbeconJSON, { data } from "../docs/ilbecon.json";
 import fs from "fs";
 import { exit } from "process";
 
@@ -19,7 +19,7 @@ interface Issue {
 async function writeJSON(data: Ilbecon[]) {
   await fs.promises.writeFile(
     "docs/ilbecon.json",
-    JSON.stringify({ data: data }, null, "  ")
+    JSON.stringify({ ...ilbeconJSON, data }, null, "  ")
   );
 }
 

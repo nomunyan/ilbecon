@@ -1,13 +1,10 @@
 {
+  "version": "1.0.0",
   "data": [
     {
       "id": 4,
       "title": "배현진콘",
-      "tags": [
-        "배현진",
-        "현진",
-        "현진콘"
-      ],
+      "tags": ["배현진", "현진", "현진콘"],
       "author": "",
       "source": "https://www.ilbe.com/view/11250473812",
       "images": [
@@ -29,11 +26,7 @@
     {
       "id": 3,
       "title": "노알라 이모티콘.nomoticon",
-      "tags": [
-        "노알라",
-        "이모티콘",
-        "nomoticon"
-      ],
+      "tags": ["노알라", "이모티콘", "nomoticon"],
       "author": "산업전사",
       "source": "https://www.ilbe.com/view/4354419389",
       "images": [
@@ -82,13 +75,7 @@
     {
       "id": 5,
       "title": "일베티콘",
-      "tags": [
-        "이모티콘",
-        "카카오톡",
-        "카카오프렌즈",
-        "카카오",
-        "프랜즈"
-      ],
+      "tags": ["이모티콘", "카카오톡", "카카오프렌즈", "카카오", "프랜즈"],
       "author": "",
       "source": "https://www.ilbe.com/view/11073801288",
       "images": [
@@ -132,11 +119,7 @@
     {
       "id": 6,
       "title": "노무콘",
-      "tags": [
-        "노무현",
-        "노무",
-        "노무콘"
-      ],
+      "tags": ["노무현", "노무", "노무콘"],
       "author": "너무강력한힘을주체할수없는전설의사나이",
       "source": "https://suyong.so/index.php?mid=sticker&page=6&sticker_srl=22168",
       "images": [
@@ -186,11 +169,7 @@
     {
       "id": 11,
       "title": "길모퉁이 마족",
-      "tags": [
-        "길모퉁이",
-        "마족",
-        "애니"
-      ],
+      "tags": ["길모퉁이", "마족", "애니"],
       "author": "Иван Хананов",
       "source": "https://tlgrm.eu/stickers/Machikado_Mazoku",
       "images": [
