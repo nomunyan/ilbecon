@@ -13,9 +13,21 @@ async function fetchIlbecon() {
   const res = await fetch("https://nomunyan.github.io/ilbecon/ilbecon.json", {
     method: "GET",
     mode: "cors",
+    cache: "no-cache",
   });
   return await res.json();
 }
+
+window.addRecentUseImage = function (image) {
+  const recentUseImages = JSON.parse(
+    localStorage.getItem("recentUseImages") || "[]"
+  );
+  recentUseImages.splice(0, 0, image);
+  localStorage.setItem(
+    "recentUseImages",
+    JSON.stringify(recentUseImages.slice(0, 5))
+  );
+};
 
 window.updateCommentBoxes = function () {
   const commentWrap = document.getElementsByClassName("post-comment-wrap")[0];
@@ -25,11 +37,19 @@ window.updateCommentBoxes = function () {
   for (const commentForm of commentForms) {
     const btnArea = commentForm.getElementsByClassName("btn-comment")[0];
     const dataForm = commentForm.getElementsByTagName("form")[0].id;
-    if (btnArea.getElementsByClassName("btn-ilbecon").length === 0)
+    if (btnArea.getElementsByClassName("btn-ilbecon").length === 0) {
+      btnArea.children[0].addEventListener("click", () => {
+        window.addRecentUseImage(
+          document
+            .getElementById(`cmt_image_view_${dataForm}`)
+            .children[0].getAttribute("src")
+        );
+      });
       btnArea.insertAdjacentHTML(
         "beforeend",
         `<button id="ilbecon" data-form="${dataForm}" class="btn-default btn-cmt-image btn-ilbecon" type="button" style="float:left;margin-left:6px;" onclick="chooserCommentIlbecon(this)"><span>일베콘</span></button>`
       );
+    }
   }
 
   const favoriteImages = JSON.parse(
@@ -142,13 +162,13 @@ Vue.component("ilbecon-list", {
 </div>
 `,
   props: {
+    open: { type: Boolean, default: false },
     data: { type: Object },
     favorite: { type: Boolean },
     favoriteImages: { type: Array },
     disableFavorite: { type: Boolean, default: false },
   },
   data: () => ({
-    open: false,
     closeStyle: {
       height: "25px",
       overflow: "hidden",
@@ -181,6 +201,14 @@ Vue.component("ilbecon-list", {
   </template>
   <template v-else-if="selTab === '즐겨찾기'">
     <ilbecon-list
+      :data="{ title: '최근 사용', images: recentUseImages }"
+      :favorite-images="favoriteImages"
+      open
+      disable-favorite
+      @toggle-favorite-image="toggleFavoriteImage"
+      @selected="selected" />
+
+    <ilbecon-list
       :data="{ title: '즐겨찾는 이미지', images: favoriteImages }"
       :favorite-images="favoriteImages"
       disable-favorite
@@ -196,11 +224,14 @@ Vue.component("ilbecon-list", {
       @selected="selected" />
   </template>
   <template v-else-if="selTab === '정보'">
-    <h2 style="color: #666; font-size: 14pt; margin-bottom: 10px;">일베콘</h2>>
-    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">즐겨찾기는 브라우저에 저장돼서 캐시삭제 하면 사라지니 주의.<h3>
-    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">현재 버전: {{ this.nowVersion }}<h3>
-    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">최신 버전: {{ this.newVersion }}<h3>
-    <a style="color: #666; font-size: 10pt; margin-bottom: 10px;" href="https://github.com/nomunyan/ilbecon" target="_blank">소스코드<a>
+    <h2 style="color: #666; font-size: 14pt; margin-bottom: 10px;">일베콘</h2><br/>
+    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">즐겨찾기는 캐시삭제 하면 사라지니 주의.</h3><br/>
+    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">현재 버전: {{ nowVersion }}</h3>
+    <h3 style="color: #666; font-size: 10pt; margin-bottom: 10px;">최신 버전: {{ newVersion }}</h3>
+    <template v-if="nowVersion !== newVersion">
+      <a style="color: #666; font-size: 10pt; margin-bottom: 10px;" href="https://raw.githubusercontent.com/nomunyan/ilbecon/master/ilbecon.user.js" target="_blank">업데이트</a>
+    </template>
+    <a style="color: #666; font-size: 10pt; margin-bottom: 10px;" href="https://github.com/nomunyan/ilbecon" target="_blank">소스코드</a>
   </template>
 </div>
 </div>
@@ -214,6 +245,7 @@ Vue.component("ilbecon-list", {
         query: "",
         favoriteIds: [],
         favoriteImages: [],
+        recentUseImages: [],
         ilbeconList: [],
         selTab: "즐겨찾기",
         reIlbecon: /https:\/\/(?:ncache|www)\.ilbe\.com\/files\/attach\/(?:cmt|new)\/\d*\/\d*\/.*\/\d*\/.*_(.*)\..*/i,
@@ -224,6 +256,9 @@ Vue.component("ilbecon-list", {
         );
         this.favoriteImages = JSON.parse(
           localStorage.getItem("favoriteImages") || "[]"
+        );
+        this.recentUseImages = JSON.parse(
+          localStorage.getItem("recentUseImages") || "[]"
         );
         const { data, version } = await fetchIlbecon();
         this.ilbeconList = data;
@@ -255,7 +290,6 @@ Vue.component("ilbecon-list", {
             this.favoriteIds = [...this.favoriteIds, id];
           }
           localStorage.setItem("favoriteIds", JSON.stringify(this.favoriteIds));
-          await this.fetchFavorites();
         },
         toggleFavoriteImage(image) {
           toggleLocalStorageFavoriteImage(image);
